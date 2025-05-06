@@ -4,19 +4,22 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta    
 from fastapi.security import OAuth2PasswordBearer
 from models import UserModel
+from datetime import UTC
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="Sign In")
 
 SECRET_KEY = "your_secret-key"  
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
 
 # Initialize CryptContext to use bcrypt hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
-    expire = datetime.utcnow() + expires_delta  
+    expire = datetime.now(UTC) + expires_delta  
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

@@ -1,19 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException,status 
+from fastapi import APIRouter, Depends, HTTPException,status,Form
 from sqlalchemy.orm import Session
 from database import get_db 
 from models import UserModel
-from schemas import UserSchema, LoginSchema,Token
+from schemas import UserSchema,CustomOAuth2PasswordRequestForm
 from passlib.hash import bcrypt
-from utils import oauth2_scheme,verify_token,hash_password,verify_password,authenticate_user,ACCESS_TOKEN_EXPIRE_MINUTES,create_access_token
-from fastapi.security import  OAuth2PasswordRequestForm
-from typing import Optional
+from utils import *
+from typing import Annotated
 from datetime import timedelta
 
 User = APIRouter()
 
 
 
-@User.post("/fasco/create_user")
+@User.post("/SignUp")
 def create_user(body: UserSchema, db: Session = Depends(get_db)):
     try:
         exits = db.query(UserModel).filter(UserModel.email == body.email).first()
@@ -31,17 +30,9 @@ def create_user(body: UserSchema, db: Session = Depends(get_db)):
         # print(e)
         return {"detail": e.detail }
     
-@User.get("/fasco/get_user")
-def get_user(db: Session = Depends(get_db)):
-    try:
-        users = db.query(UserModel).all()
-        return {"Body": users}
-    except Exception as e:
-        print(e)
-        return None
-    
-@User.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+
+@User.post("/Sign In")
+def Login(form_data: CustomOAuth2PasswordRequestForm = Form(...), db: Session = Depends(get_db)):
     try:
 
         user = authenticate_user(db, form_data.username, form_data.password)
@@ -54,11 +45,39 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     except Exception as e:
         # print(e)
         return {"detail": e.detail }
+
+# @User.post("/Sign In")
+# def login(form_data: CustomOAuth2PasswordRequestForm, db: Session = Depends(get_db)):
+#     try:
+
+#         user = authenticate_user(db, form_data.username, form_data.password)
+#         if not user:
+#             raise HTTPException(status_code=400, detail="Invalid email or password")
+        
+#         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+#         access_token = create_access_token(
+#             data={"sub": user.email}, expires_delta=access_token_expires
+#         )
+#         return {"access_token": access_token, "token_type": "bearer"}
+#     except Exception as e:
+#         print(e)
     
-@User.get("/protected")
-def protected_route(token: str = Depends(oauth2_scheme)):
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return {"message": "You are authorized!", "user": payload["sub"]}
+
+@User.get("/users/")
+def read_users(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        users = db.query(UserModel).all()
+        return users
+    except Exception as e:
+        print(e)
+
+
+
+
+
+
+
+
+
+
 

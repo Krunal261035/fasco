@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, field_validator,Field,StringConstraints
 from datetime import datetime
 from typing import Annotated
-from fastapi import Form
+
 
 OnlyAlphabets = Annotated[str, StringConstraints(pattern='^[A-Za-z]+$')]
 class UserSchema(BaseModel):
@@ -29,16 +29,12 @@ class UserSchema(BaseModel):
     
     
 
-class LoginSchema(BaseModel):
-    email: EmailStr
-    password: str
 
-def login_form(
-    username: str = Form(...),
-    password: str = Form(...)
-) -> LoginSchema:
-    return LoginSchema(username=username, password=password)
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
+class CustomOAuth2PasswordRequestForm(BaseModel):
+    username: str 
+    password: str 
+    
+
+
+    

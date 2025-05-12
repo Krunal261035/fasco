@@ -2,10 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException,status,Form
 from sqlalchemy.orm import Session
 from database import get_db 
 from models import UserModel
-from schemas import UserSchema,CustomOAuth2PasswordRequestForm
-from passlib.hash import bcrypt
+from schemas import UserSchema,CustomOAuth2PasswordRequestForm,ForgetPasswordRequest,ResetPassword
 from utils import *
-from typing import Annotated
 from datetime import timedelta
 
 User = APIRouter()
@@ -46,22 +44,6 @@ def Login(form_data: CustomOAuth2PasswordRequestForm = Form(...), db: Session = 
         # print(e)
         return {"detail": e.detail }
 
-# @User.post("/Sign In")
-# def login(form_data: CustomOAuth2PasswordRequestForm, db: Session = Depends(get_db)):
-#     try:
-
-#         user = authenticate_user(db, form_data.username, form_data.password)
-#         if not user:
-#             raise HTTPException(status_code=400, detail="Invalid email or password")
-        
-#         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-#         access_token = create_access_token(
-#             data={"sub": user.email}, expires_delta=access_token_expires
-#         )
-#         return {"access_token": access_token, "token_type": "bearer"}
-#     except Exception as e:
-#         print(e)
-    
 
 @User.get("/users/")
 def read_users(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -71,13 +53,45 @@ def read_users(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db
     except Exception as e:
         print(e)
 
+@User.post("/forget Password")
+def forget_password(body:ForgetPasswordRequest,db:Session = Depends(get_db),token: str = Depends(oauth2_scheme)):
+    user = db.query(UserModel).filter(UserModel.email == body.email).first()
+    if not user:
+        raise HTTPException(status_code=404,detail="User Not Found")
+    token = generate_reset_token()
+    expiry = get_expiry()
+    user.reset_token = token
+    user.reset_token_expiry = expiry
+    db.commit()
+    # Here you’d email the token to the user
+    return {"msg": "Password reset token created", "token": token}
 
+from datetime import datetime, timezone
 
+@User.post("/reset-password")
+def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
+    user = db.query(UserModel).filter(UserModel.reset_token == data.token).first()
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid token")
 
+    # Safely convert to timezone-aware for comparison
+    if not user.reset_token_expiry:
+        raise HTTPException(status_code=400, detail="Token has no expiry set")
 
+    expiry = user.reset_token_expiry
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
 
+    if expiry < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Expired token")
 
-
-
+    # Proceed to reset the password
+    user.password_hash = hash_password(data.new_password)
+    user.reset_token = None
+    user.reset_token_expiry = None
+    db.commit()
+    
+    return {"msg": "Password reset successful"}
 
 

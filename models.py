@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String,DateTime
+from sqlalchemy import Column, Integer, String,DateTime,ForeignKey,Text, TIMESTAMP
 from database import Base
+from datetime import datetime
+from sqlalchemy.orm import relationship
 
 class UserModel(Base):
     __tablename__ = "user"
@@ -12,5 +14,9 @@ class UserModel(Base):
     confirm_password = Column(String, index=True)
     created_at = Column(DateTime, index=True)
     updated_at = Column(DateTime, index=True)
+    reset_token = Column(Text, nullable=True)
+    reset_token_expiry = Column(TIMESTAMP(timezone=True), nullable=True)
+
+
 
     

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator,Field,StringConstraints
+from pydantic import BaseModel, EmailStr, field_validator,StringConstraints
 from datetime import datetime
 from typing import Annotated
 
@@ -34,7 +34,12 @@ class UserSchema(BaseModel):
 class CustomOAuth2PasswordRequestForm(BaseModel):
     username: str 
     password: str 
-    
+
+class ForgetPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPassword(BaseModel):
+    token: str
+    new_password: str
 
 
-    

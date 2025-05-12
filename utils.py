@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from models import UserModel
 from datetime import UTC
 
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="Sign In")
 
 SECRET_KEY = "your_secret-key"  
@@ -45,6 +46,15 @@ def verify_token(token: str):
         return payload
     except JWTError:
         return None
+    
 
+import secrets
+from datetime import datetime, timedelta
+
+def generate_reset_token():
+    return secrets.token_urlsafe(32)
+
+def get_expiry(hours=1):
+    return datetime.now(UTC) + timedelta(hours=hours)
 
 

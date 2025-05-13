@@ -5,6 +5,10 @@ from models import UserModel
 from schemas import UserSchema,CustomOAuth2PasswordRequestForm,ForgetPasswordRequest,ResetPassword
 from utils import *
 from datetime import timedelta
+from pydantic import BaseModel
+from random import randint
+from datetime import datetime, timedelta, timezone
+from config import send_email
 
 User = APIRouter()
 
@@ -53,45 +57,56 @@ def read_users(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db
     except Exception as e:
         print(e)
 
-@User.post("/forget Password")
-def forget_password(body:ForgetPasswordRequest,db:Session = Depends(get_db),token: str = Depends(oauth2_scheme)):
+@User.post("/forget-password")
+def forget_password(body: ForgetPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(UserModel).filter(UserModel.email == body.email).first()
     if not user:
-        raise HTTPException(status_code=404,detail="User Not Found")
-    token = generate_reset_token()
-    expiry = get_expiry()
-    user.reset_token = token
-    user.reset_token_expiry = expiry
-    db.commit()
-    # Here you’d email the token to the user
-    return {"msg": "Password reset token created", "token": token}
+        raise HTTPException(status_code=404, detail="User Not Found")
 
-from datetime import datetime, timezone
+    otp = f"{randint(100000, 999999)}"  # 6-digit numeric OTP
+    expiry = datetime.now(timezone.utc) + timedelta(minutes=10)  # OTP valid for 10 minutes
+
+    user.otp_code = otp
+    user.otp_expiry = expiry
+    db.commit()
+
+    send_email(
+        to_email=user.email,
+        subject="Your OTP Code",
+        body=f"Your OTP for password reset is: {otp}. It will expire in 10 minutes."
+    )
+
+    # Send OTP via email (you'll need to integrate email sending logic)
+    # e.g., send_email(user.email, "Your OTP code", f"Your OTP is {otp}")
+
+    return {"msg": "OTP sent to email"}
 
 @User.post("/reset-password")
 def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.reset_token == data.token).first()
-    
-    if not user:
-        raise HTTPException(status_code=400, detail="Invalid token")
+    try:
+        user = db.query(UserModel).filter(UserModel.email == data.email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-    # Safely convert to timezone-aware for comparison
-    if not user.reset_token_expiry:
-        raise HTTPException(status_code=400, detail="Token has no expiry set")
+        if user.otp_code != data.otp:
+            raise HTTPException(status_code=400, detail="Invalid OTP")
 
-    expiry = user.reset_token_expiry
-    if expiry.tzinfo is None:
-        expiry = expiry.replace(tzinfo=timezone.utc)
+        # if not user.otp_expiry or user.otp_expiry < datetime.now(timezone.utc):
+        #     raise HTTPException(status_code=400, detail="OTP expired")
+        otp_expiry = user.otp_expiry
+        if otp_expiry.tzinfo is None:
+            otp_expiry = otp_expiry.replace(tzinfo=timezone.utc)
 
-    if expiry < datetime.now(timezone.utc):
-        raise HTTPException(status_code=400, detail="Expired token")
+        if otp_expiry < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="OTP expired")
 
-    # Proceed to reset the password
-    user.password_hash = hash_password(data.new_password)
-    user.reset_token = None
-    user.reset_token_expiry = None
-    db.commit()
-    
-    return {"msg": "Password reset successful"}
+        user.password_hash = hash_password(data.new_password)
+        user.otp_code = None
+        user.otp_expiry = None  
+        db.commit()
+
+        return {"msg": "Password reset successful"}
+    except Exception as e:
+        print(e)
 
 

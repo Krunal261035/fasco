@@ -38,8 +38,9 @@ class CustomOAuth2PasswordRequestForm(BaseModel):
 class ForgetPasswordRequest(BaseModel):
     email: EmailStr
 
+
+
 class ResetPassword(BaseModel):
-    token: str
+    email: EmailStr
+    otp: str
     new_password: str
-
-

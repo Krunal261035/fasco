@@ -14,7 +14,7 @@ class UserModel(Base):
     created_at = Column(DateTime, index=True)
     updated_at = Column(DateTime, index=True)
     otp_code = Column(String, nullable=True)
-    otp_expiry = Column(DateTime, nullable=True)
+    otp_expiry = Column(DateTime(timezone=True), nullable=True)
 
 
 

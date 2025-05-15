@@ -1,4 +1,3 @@
-# utils.py
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta    
@@ -50,11 +49,11 @@ def verify_token(token: str):
 
 import secrets
 from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, timezone
 def generate_reset_token():
     return secrets.token_urlsafe(32)
 
 def get_expiry(hours=1):
-    return datetime.now(UTC) + timedelta(hours=hours)
+    return datetime.now(timezone.utc) + timedelta(hours=hours)
 
 

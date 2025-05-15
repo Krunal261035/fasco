@@ -17,13 +17,13 @@ User = APIRouter()
 @User.post("/SignUp")
 def create_user(body: UserSchema, db: Session = Depends(get_db)):
     try:
-        exits = db.query(UserModel).filter(UserModel.email == body.email).first()
+        exits = db.query(UserModel).filter(UserModel.email == body.email.strip().lower()).first()
         if exits:
             raise HTTPException(status_code=400, detail="User already exists")
         if body.password != body.confirm_password:
             raise HTTPException(status_code=400, detail="Password and confirm password do not match")
         hashed_password = hash_password(body.password)
-        new_user = UserModel(f_name=body.f_name, l_name=body.l_name, email=body.email, password=hashed_password, confirm_password=hashed_password, created_at=body.created_at, updated_at=body.updated_at)  
+        new_user = UserModel(f_name=body.f_name, l_name=body.l_name, email=body.email.strip().lower(), password=hashed_password, confirm_password=hashed_password, created_at=body.created_at, updated_at=body.updated_at)  
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
@@ -37,7 +37,7 @@ def create_user(body: UserSchema, db: Session = Depends(get_db)):
 def Login(form_data: CustomOAuth2PasswordRequestForm = Form(...), db: Session = Depends(get_db)):
     try:
 
-        user = authenticate_user(db, form_data.username, form_data.password)
+        user = authenticate_user(db, form_data.username.strip().lower(), form_data.password)
         if not user or not verify_password(form_data.password, user.password):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email or password")
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -48,14 +48,11 @@ def Login(form_data: CustomOAuth2PasswordRequestForm = Form(...), db: Session = 
         # print(e)
         return {"detail": e.detail }
 
+@User.get("/user")
+def get_user(token:str = Depends(oauth2_scheme),db:Session = Depends(get_db)):
+    user = db.query(UserModel).all()
+    return {"body":user}
 
-@User.get("/users/")
-def read_users(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    try:
-        users = db.query(UserModel).all()
-        return users
-    except Exception as e:
-        print(e)
 
 @User.post("/forget-password")
 def forget_password(body: ForgetPasswordRequest, db: Session = Depends(get_db)):
@@ -81,32 +78,75 @@ def forget_password(body: ForgetPasswordRequest, db: Session = Depends(get_db)):
 
     return {"msg": "OTP sent to email"}
 
+# @User.post("/reset-password")
+# def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
+#     try:
+#         user = db.query(UserModel).filter(UserModel.email == data.email).first()
+#         print("DB email:", user.email)
+#         print("DB otp_code:", user.otp_code)
+#         print("Input email:", data.email)
+#         print("Input otp:", data.otp)
+
+#         if not user or user.otp_code != data.otp:
+#             raise HTTPException(status_code=400, detail="Invalid email or OTP")
+
+#         # if not user.otp_expiry or user.otp_expiry < datetime.now(timezone.utc):
+#         #     raise HTTPException(status_code=400, detail="OTP expired")
+#         otp_expiry = user.otp_expiry
+#         if otp_expiry.tzinfo is None:
+#             otp_expiry = otp_expiry.replace(tzinfo=timezone.utc)
+
+#         if otp_expiry < datetime.now(timezone.utc):
+#             raise HTTPException(status_code=400, detail="OTP expired")
+        
+
+#         user.password_hash = hash_password(data.new_password)
+#         user.otp_code = None
+#         user.otp_expiry = None
+
+#         db.commit()
+
+#         return {"msg": "Password reset successful"}
+    
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         print(f"Unexpected error: {e}")
+#         raise HTTPException(status_code=500, detail="Internal server error")
+
 @User.post("/reset-password")
 def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
     try:
-        user = db.query(UserModel).filter(UserModel.email == data.email).first()
+        normalized_email = data.email.strip().lower()
+        user = db.query(UserModel).filter(UserModel.email == normalized_email).first()
+        print("DB email:", user.email)
+        print("DB otp_code:", user.otp_code)
+        print("Input email:", data.email)
+        print("Input otp:", data.otp)
+
+
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=400, detail="Invalid email")
 
-        if user.otp_code != data.otp:
-            raise HTTPException(status_code=400, detail="Invalid OTP")
+        if not user.otp_code or user.otp_code != data.otp:
+            raise HTTPException(status_code=400, detail="Invalid  OTP")
 
-        # if not user.otp_expiry or user.otp_expiry < datetime.now(timezone.utc):
-        #     raise HTTPException(status_code=400, detail="OTP expired")
         otp_expiry = user.otp_expiry
-        if otp_expiry.tzinfo is None:
-            otp_expiry = otp_expiry.replace(tzinfo=timezone.utc)
-
-        if otp_expiry < datetime.now(timezone.utc):
+        if otp_expiry is None or (
+            otp_expiry.replace(tzinfo=timezone.utc) if otp_expiry.tzinfo is None else otp_expiry
+        ) < datetime.now(timezone.utc):
             raise HTTPException(status_code=400, detail="OTP expired")
 
-        user.password_hash = hash_password(data.new_password)
+        user.password = hash_password(data.new_password)
         user.otp_code = None
-        user.otp_expiry = None  
+        user.otp_expiry = None
+
         db.commit()
 
         return {"msg": "Password reset successful"}
+
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        print(e)
-
-
+        print(f"Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException,status,Form
 from sqlalchemy.orm import Session
 from database import get_db 
-from models import UserModel
-from schemas import UserSchema,CustomOAuth2PasswordRequestForm,ForgetPasswordRequest,ResetPassword
+from Models.models import UserModel
+from schemas.schemas import UserSchema,CustomOAuth2PasswordRequestForm,ForgetPasswordRequest,ResetPassword
 from utils import *
 from datetime import timedelta
 from pydantic import BaseModel
@@ -78,41 +78,7 @@ def forget_password(body: ForgetPasswordRequest, db: Session = Depends(get_db)):
 
     return {"msg": "OTP sent to email"}
 
-# @User.post("/reset-password")
-# def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
-#     try:
-#         user = db.query(UserModel).filter(UserModel.email == data.email).first()
-#         print("DB email:", user.email)
-#         print("DB otp_code:", user.otp_code)
-#         print("Input email:", data.email)
-#         print("Input otp:", data.otp)
 
-#         if not user or user.otp_code != data.otp:
-#             raise HTTPException(status_code=400, detail="Invalid email or OTP")
-
-#         # if not user.otp_expiry or user.otp_expiry < datetime.now(timezone.utc):
-#         #     raise HTTPException(status_code=400, detail="OTP expired")
-#         otp_expiry = user.otp_expiry
-#         if otp_expiry.tzinfo is None:
-#             otp_expiry = otp_expiry.replace(tzinfo=timezone.utc)
-
-#         if otp_expiry < datetime.now(timezone.utc):
-#             raise HTTPException(status_code=400, detail="OTP expired")
-        
-
-#         user.password_hash = hash_password(data.new_password)
-#         user.otp_code = None
-#         user.otp_expiry = None
-
-#         db.commit()
-
-#         return {"msg": "Password reset successful"}
-    
-#     except HTTPException as e:
-#         raise e
-#     except Exception as e:
-#         print(f"Unexpected error: {e}")
-#         raise HTTPException(status_code=500, detail="Internal server error")
 
 @User.post("/reset-password")
 def reset_password(data: ResetPassword, db: Session = Depends(get_db)):

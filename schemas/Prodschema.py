@@ -23,3 +23,12 @@ class PurchaseRequest(BaseModel):
 class PurchaseResponse(BaseModel):
     message: str
     remaining_stock: int
+
+class CategoryBase(BaseModel):
+    id: int
+    name: str
+
+class AddToCartRequest(BaseModel):
+    product_id: int
+    quantity: int
+    user_id: int | None = None

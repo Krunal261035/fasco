@@ -49,9 +49,14 @@ def Login(form_data: CustomOAuth2PasswordRequestForm = Form(...), db: Session = 
         return {"detail": e.detail }
 
 @User.get("/user")
-def get_user(token:str = Depends(oauth2_scheme),db:Session = Depends(get_db)):
-    user = db.query(UserModel).all()
-    return {"body":user}
+def get_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    payload = verify_token(credentials)
+    users = db.query(UserModel).all()
+    return {"body": users}
+
 
 
 @User.post("/forget-password")

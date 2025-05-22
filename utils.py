@@ -1,12 +1,15 @@
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta    
-from fastapi.security import OAuth2PasswordBearer
 from Models.models import UserModel
 from datetime import UTC
+from fastapi import HTTPException,status
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="Sign In")
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+security = HTTPBearer()
+
 
 SECRET_KEY = "your_secret-key"  
 ALGORITHM = "HS256"
@@ -39,13 +42,18 @@ def hash_password(password: str):
 def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
-def verify_token(token: str):
+def verify_token(credentials: HTTPAuthorizationCredentials):
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except JWTError:
-        return None
-    
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 
 import secrets
 from datetime import datetime, timedelta

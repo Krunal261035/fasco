@@ -8,10 +8,10 @@ app.include_router(User, tags=["User"])
 app.include_router(router_products,tags=["Product"])
 
 origins = [
-    "http://localhost.tiangolo.com",
-    "https://localhost.tiangolo.com",
-    "http://localhost",
-    "http://localhost:8080",
+    "http://192.168.144.122:3000",
+    "http://localhost:3000"
+    
+    
 ]
 
 app.add_middleware(

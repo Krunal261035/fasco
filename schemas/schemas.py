@@ -10,8 +10,8 @@ class UserSchema(BaseModel):
     email: EmailStr
     password: str
     confirm_password: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime |None
+    updated_at:  datetime| None
 
     @field_validator('password')
     def validate_password(cls, value):

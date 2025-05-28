@@ -32,3 +32,7 @@ class AddToCartRequest(BaseModel):
     product_id: int
     quantity: int
     user_id: int | None = None
+
+class RemoveFromCartRequest(BaseModel):
+    product_id: int
+    user_id: int | None = None  # Optional for guest cart

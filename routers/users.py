@@ -5,7 +5,6 @@ from Models.models import UserModel
 from schemas.schemas import UserSchema,CustomOAuth2PasswordRequestForm,ForgetPasswordRequest,ResetPassword
 from utils import *
 from datetime import timedelta
-from pydantic import BaseModel
 from random import randint
 from datetime import datetime, timedelta, timezone
 from config import send_email
@@ -33,29 +32,25 @@ def create_user(body: UserSchema, db: Session = Depends(get_db)):
         return {"detail": e.detail }
     
 
-@User.post("/Sign In")
+@User.post("/SignIn")
 def Login(form_data: CustomOAuth2PasswordRequestForm = Form(...), db: Session = Depends(get_db)):
     try:
 
-        user = authenticate_user(db, form_data.username.strip().lower(), form_data.password)
+        user = authenticate_user(db, form_data.Email.strip().lower(), form_data.password)
         if not user or not verify_password(form_data.password, user.password):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email or password")
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
-        return {"access_token": access_token, "token_type": "bearer"}
-        # return {"Body": user, "message": "Login successful"}
+        else:
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
+            return {"access_token": access_token, "token_type": "bearer"}
+            # return {"Body": user, "message": "Login successful"}
     except Exception as e:
         # print(e)
         return {"detail": e.detail }
 
 @User.get("/user")
-def get_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-):
-    payload = verify_token(credentials)
-    users = db.query(UserModel).all()
-    return {"body": users}
+def get_user(user: UserModel = Depends(verify_token)):
+    return {"user": user}
 
 
 

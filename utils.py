@@ -3,7 +3,9 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta    
 from Models.models import UserModel
 from datetime import UTC
-from fastapi import HTTPException,status
+from fastapi import HTTPException,status,Depends
+from database import get_db
+from sqlalchemy.orm import Session
 
 
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -19,14 +21,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Initialize CryptContext to use bcrypt hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
-    expire = datetime.now(UTC) + expires_delta  
+    expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
-
 def get_user_by_email(db, email: str):
     return db.query(UserModel).filter(UserModel.email == email).first()
 
@@ -42,17 +42,37 @@ def hash_password(password: str):
 def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
-def verify_token(credentials: HTTPAuthorizationCredentials):
+# def verify_token(credentials: HTTPAuthorizationCredentials):
+#     token = credentials.credentials
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         return payload
+#     except JWTError:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Invalid or expired token",
+#             headers={"WWW-Authenticate": "Bearer"},
+#         )
+
+def verify_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
     token = credentials.credentials
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+        user = get_user_by_email(db, email)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        return user
     except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
 
 
 import secrets

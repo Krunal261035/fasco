@@ -32,7 +32,7 @@ class UserSchema(BaseModel):
 
 
 class CustomOAuth2PasswordRequestForm(BaseModel):
-    username: str 
+    Email: str 
     password: str 
 
 class ForgetPasswordRequest(BaseModel):

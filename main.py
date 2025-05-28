@@ -9,7 +9,8 @@ app.include_router(router_products,tags=["Product"])
 
 origins = [
     "http://192.168.144.122:3000",
-    "http://localhost:3000"
+    "http://localhost:5173"
+
     
     
 ]

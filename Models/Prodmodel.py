@@ -19,15 +19,6 @@ class ProductModel(Base):
     description = Column(String,index=True)
     category_id = Column(Integer,index=True)
 
-class ProductHistoryModel(Base):
-    __tablename__ = "purchase_history"
-    __table_args__ = {'schema': 'products'}
-
-    purchase_id = Column(Integer, primary_key=True, index=True)
-    product_id = Column(Integer)
-    quantity = Column(Integer)
-    purchase_date = Column(DateTime(timezone=True), server_default=func.now())
-
 
 class ProductCategoryModel(Base):
     __tablename__ = "product_category"

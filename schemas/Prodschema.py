@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel,validator
 from enum import Enum
+from typing import List
 class SizeEnum(str, Enum):
     M = "M"
     L = "L"
@@ -16,14 +17,6 @@ class ProductSChema(BaseModel):
     description:str
     category_id:int
 
-class PurchaseRequest(BaseModel):
-    product_id: int
-    quantity: int
-
-class PurchaseResponse(BaseModel):
-    message: str
-    remaining_stock: int
-
 class CategoryBase(BaseModel):
     id: int
     name: str
@@ -33,6 +26,19 @@ class AddToCartRequest(BaseModel):
     quantity: int
     user_id: int | None = None
 
+    @validator("user_id")
+    def validate_user_id(cls, v):
+        if v == 0:
+            return None  # or raise ValueError("user_id cannot be 0")
+        return v
+
 class RemoveFromCartRequest(BaseModel):
     product_id: int
     user_id: int | None = None  # Optional for guest cart
+
+    @validator("user_id")
+    def validate_user_id(cls, v):
+        if v == 0:
+            return None  # or raise ValueError("user_id cannot be 0")
+        return v
+

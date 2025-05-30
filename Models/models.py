@@ -17,5 +17,17 @@ class UserModel(Base):
     otp_expiry = Column(DateTime(timezone=True), nullable=True)
 
 
+class AddressModel(Base):
+    __tablename__ = "shipping_address"
+    __table_args__ = {'schema': 'users'}
+    address_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer,index=True)
+    address_line = Column(String,index = True)
+    city = Column(String,index = True)
+    state = Column(String,index = True)
+    postal_code = Column(String,index = True)
+    country = Column(String,index = True)
+    created_at = Column(DateTime, index=True)
+
 
     

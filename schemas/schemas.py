@@ -44,3 +44,11 @@ class ResetPassword(BaseModel):
     email: EmailStr
     otp: str
     new_password: str
+
+class UserAddressSchema(BaseModel):
+    address_line:str
+    city: str
+    state:str
+    postal_code:str
+    country:str
+    created_at:datetime

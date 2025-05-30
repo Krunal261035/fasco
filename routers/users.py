@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException,status,Form
+from fastapi import APIRouter, Depends, HTTPException,status,Form,Response
 from sqlalchemy.orm import Session
 from database import get_db 
-from Models.models import UserModel
-from schemas.schemas import UserSchema,CustomOAuth2PasswordRequestForm,ForgetPasswordRequest,ResetPassword
+from Models.models import UserModel,AddressModel
+from schemas.schemas import UserSchema,CustomOAuth2PasswordRequestForm,ForgetPasswordRequest,ResetPassword,UserAddressSchema
 from utils import *
 from datetime import timedelta
 from random import randint
 from datetime import datetime, timedelta, timezone
 from config import send_email
+from fastapi.responses import JSONResponse
 
 User = APIRouter()
 
@@ -33,7 +34,7 @@ def create_user(body: UserSchema, db: Session = Depends(get_db)):
     
 
 @User.post("/SignIn")
-def Login(form_data: CustomOAuth2PasswordRequestForm = Form(...), db: Session = Depends(get_db)):
+def Login(form_data: CustomOAuth2PasswordRequestForm = Form(...), db: Session = Depends(get_db),response: Response = None):
     try:
 
         user = authenticate_user(db, form_data.Email.strip().lower(), form_data.password)
@@ -42,6 +43,7 @@ def Login(form_data: CustomOAuth2PasswordRequestForm = Form(...), db: Session = 
         else:
             access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
             access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
+            response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES*60)
             return {"access_token": access_token, "token_type": "bearer"}
             # return {"Body": user, "message": "Login successful"}
     except Exception as e:
@@ -85,10 +87,10 @@ def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
     try:
         normalized_email = data.email.strip().lower()
         user = db.query(UserModel).filter(UserModel.email == normalized_email).first()
-        print("DB email:", user.email)
-        print("DB otp_code:", user.otp_code)
-        print("Input email:", data.email)
-        print("Input otp:", data.otp)
+        # print("DB email:", user.email)
+        # print("DB otp_code:", user.otp_code)
+        # print("Input email:", data.email)
+        # print("Input otp:", data.otp)
 
 
         if not user:
@@ -116,3 +118,38 @@ def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+    
+
+@User.post("/UserAddress")
+def AddAddress(body:UserAddressSchema,db:Session = Depends(get_db),token:UserModel = Depends(verify_token)):
+    try:
+        Address = AddressModel(**body.model_dump(),user_id=token.id)
+        db.add(Address)
+        db.commit()
+        db.refresh(Address)
+        return {"body":Address}
+    except Exception as e:
+        return e
+
+@User.get("/address")
+def data(current_user: UserModel = Depends(verify_token), db: Session = Depends(get_db)):
+    try:
+        users = db.query(AddressModel).filter(AddressModel.user_id == current_user.id).all()
+        if not users:
+            raise HTTPException(status_code=404, detail="Address not Found")
+        return {"body": users}
+    except Exception as e:
+        return {"detail": str(e)}
+
+@User.delete("/address")
+def delete_address(db: Session = Depends(get_db), token: UserModel = Depends(verify_token)):
+    try:
+        address = db.query(AddressModel).filter(AddressModel.user_id == token.id).first()
+        if not address:
+            raise HTTPException(status_code=404, detail="Address not found")
+        
+        db.delete(address)
+        db.commit()
+        return {"detail": "Address deleted successfully"}
+    except Exception as e:
+        return {"detail": str(e)}

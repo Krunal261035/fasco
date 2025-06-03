@@ -1,6 +1,6 @@
 from pydantic import BaseModel,validator
 from enum import Enum
-from typing import List
+from typing import List,Optional
 class SizeEnum(str, Enum):
     M = "M"
     L = "L"
@@ -16,6 +16,14 @@ class ProductSChema(BaseModel):
     stock:int
     description:str
     category_id:int
+
+class PurchaseRequest(BaseModel):
+    product_id: int
+    quantity: int
+
+class PurchaseResponse(BaseModel):
+    message: str
+    remaining_stock: int
 
 class CategoryBase(BaseModel):
     id: int

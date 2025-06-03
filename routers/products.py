@@ -1,8 +1,8 @@
 from fastapi import APIRouter,Depends,Query,HTTPException
 from sqlalchemy.orm import Session
 from database import get_db 
-from Models.Prodmodel import ProductModel
-from schemas.Prodschema import AddToCartRequest,RemoveFromCartRequest
+from Models.Prodmodel import ProductModel,CartItemModel
+from schemas.Prodschema import AddToCartRequest,RemoveFromCartRequest,CheckoutRequest
 import psycopg2
 from typing import List
 from utils import verify_token
@@ -71,4 +71,7 @@ def remove_from_cart(data: RemoveFromCartRequest):
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 

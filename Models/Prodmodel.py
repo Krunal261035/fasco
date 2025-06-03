@@ -27,3 +27,15 @@ class ProductCategoryModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100))
     description = Column(String(1000))
+
+
+class CartItemModel(Base):
+    __tablename__ = "cart_items"
+    __table_args__ = {'schema': 'products'}
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer,index=True)
+    product_id = Column(Integer,index=True)
+    quantity = Column(Integer,index=True)
+    created_at = Column(DateTime, index=True)
+
